@@ -17,10 +17,8 @@ st.set_page_config(
 )
 
 # Configuração da chave da API OpenAI diretamente dos segredos do Streamlit
-if "openai" in st.secrets and "api_key" in st.secrets["openai"]:
-    openai.api_key = st.secrets["openai"]["api_key"]
-else:
-    st.error("A chave de API não foi encontrada nos segredos. Verifique a configuração.")
+openai.api_key = "org-KKZTeMEKFocZz7O14lGkSfJE"
+
 
 
 # Funções de conversão de dados
