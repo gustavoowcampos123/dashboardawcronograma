@@ -44,6 +44,12 @@ if uploaded_file is not None:
     if 'Duração' not in df_raw.columns or 'Início' not in df_raw.columns or 'Término' not in df_raw.columns:
         st.error("O arquivo deve conter as colunas 'Duração', 'Início', e 'Término'.")
     else:
+        # Cálculo do prazo total com base nas datas
+        data_inicio_mais_cedo = df_raw['Início'].min()
+        data_termino_mais_tarde = df_raw['Término'].max()
+        prazo_total = (data_termino_mais_tarde - data_inicio_mais_cedo).days
+
+        # Filtros de atividades
         proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
         atividades_proximos_15_dias = df_raw[(df_raw['Início'] <= proximos_15_dias) & (df_raw['Término'] >= pd.Timestamp.today())]
         atividades_sem_predecessora = df_raw[df_raw['Predecessoras'].isna()]
@@ -57,7 +63,7 @@ if uploaded_file is not None:
         col1, col2, col3 = st.columns(3)
         col1.metric("Atividades Concluídas", len(df_raw[df_raw['% concluída'] == 100]))
         col2.metric("Atividades Atrasadas", len(atividades_atrasadas))
-        col3.metric("Prazo Total do Projeto", f"{df_raw['Duração'].sum()} dias")
+        col3.metric("Prazo Total do Projeto", f"{prazo_total} dias")
 
         # Gráfico Curva S
         curva_s_df = pd.DataFrame({'Semana': list(range(1, 21)), 'Progresso': [5, 10, 20, 30, 40, 50, 60, 65, 70, 80, 85, 90, 92, 93, 95, 96, 97, 98, 99, 100]})
