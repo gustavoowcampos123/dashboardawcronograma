@@ -97,6 +97,7 @@ if uploaded_file is not None:
         data_inicio_mais_cedo = df_raw['Início'].min()
         data_termino_mais_tarde = df_raw['Término'].max()
         prazo_total = (data_termino_mais_tarde - data_inicio_mais_cedo).days
+        dias_para_finalizar = (data_termino_mais_tarde - pd.Timestamp.today()).days
 
         # Filtros de atividades
         proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
@@ -110,7 +111,7 @@ if uploaded_file is not None:
         # Indicadores
         atividades_concluidas = len(df_raw[df_raw['% concluída'] == 1])
         st.title("Dashboard do Projeto")
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Atividades Concluídas", atividades_concluidas)
         
         with col2:
@@ -125,6 +126,7 @@ if uploaded_file is not None:
                 )
 
         col3.metric("Prazo Total do Projeto", f"{prazo_total} dias")
+        col4.metric("Dias para Finalizar", f"{dias_para_finalizar} dias")
 
         # Geração e Plotagem da Curva S
         curva_s_df = gerar_curva_s(df_raw, start_date_str=data_inicio_mais_cedo.strftime('%d/%m/%Y'))
