@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Configuração da chave da API OpenAI a partir dos segredos do Streamlit
+# Configuração da chave da API OpenAI diretamente dos segredos do Streamlit
 openai.api_key = st.secrets["openai"]["api_key"]
 
 # Funções de conversão de dados
@@ -118,6 +118,6 @@ if uploaded_file is not None:
         st.write("**Resposta do Assistente:**")
         st.write(resposta_chatbot)
 
-    # Demais elementos do dashboard já existentes...
+    # Outros elementos do dashboard...
 else:
     st.warning("Por favor, carregue o cronograma para visualizar o painel.")
