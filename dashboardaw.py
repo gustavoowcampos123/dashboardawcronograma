@@ -47,7 +47,7 @@ if uploaded_file is not None:
         # Cálculo do prazo total com base nas datas
         data_inicio_mais_cedo = df_raw['Início'].min()
         data_termino_mais_tarde = df_raw['Término'].max()
-        prazo_total = (data_termino_mais_tarde - data_inicio_mais_cedo).days
+        prazo_total = (data_termino_mais_cedo - data_inicio_mais_cedo).days
 
         # Filtros de atividades
         proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
@@ -59,7 +59,7 @@ if uploaded_file is not None:
         atividades_proxima_semana = df_raw[(df_raw['Início'] <= proxima_semana) & (df_raw['Término'] >= pd.Timestamp.today())]
 
         # Indicadores
-        atividades_concluidas = len(df_raw[df_raw['% concluída'] == 100])
+        atividades_concluidas = len(df_raw[df_raw['% concluída'] == 1])
         st.title("Dashboard do Projeto")
         col1, col2, col3 = st.columns(3)
         col1.metric("Atividades Concluídas", atividades_concluidas)
