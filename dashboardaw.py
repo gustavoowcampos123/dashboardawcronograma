@@ -59,9 +59,10 @@ if uploaded_file is not None:
         atividades_proxima_semana = df_raw[(df_raw['Início'] <= proxima_semana) & (df_raw['Término'] >= pd.Timestamp.today())]
 
         # Indicadores
+        atividades_concluidas = len(df_raw[df_raw['% concluída'] == 100])
         st.title("Dashboard do Projeto")
         col1, col2, col3 = st.columns(3)
-        col1.metric("Atividades Concluídas", len(df_raw[df_raw['% concluída'] == 100]))
+        col1.metric("Atividades Concluídas", atividades_concluidas)
         col2.metric("Atividades Atrasadas", len(atividades_atrasadas))
         col3.metric("Prazo Total do Projeto", f"{prazo_total} dias")
 
