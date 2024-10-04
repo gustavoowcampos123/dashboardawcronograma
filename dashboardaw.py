@@ -3,8 +3,7 @@ import pandas as pd
 import openai
 
 # Configuração da chave da API OpenAI diretamente dos segredos do Streamlit
-openai.api_key = "org-KKZTeMEKFocZz7O14lGkSfJE"
-
+openai.api_key = st.secrets["openai"]["api_key"]
 
 # Função para analisar atrasos usando a nova API de completions
 def analisar_atrasos(df):
@@ -32,9 +31,9 @@ if uploaded_file is not None:
             analise_atrasos_texto = analisar_atrasos(df_raw)
             st.write("**Análise de Atrasos:**")
             st.write(analise_atrasos_texto)
-        except openai.error.AuthenticationError:
-            st.error("A chave de API não é válida ou expirou.")
+        except openai.error.OpenAIError as e:
+            st.error(f"Ocorreu um erro com a API OpenAI: {e}")
         except Exception as e:
-            st.error(f"Ocorreu um erro: {e}")
+            st.error(f"Ocorreu um erro inesperado: {e}")
 else:
     st.warning("Por favor, carregue o cronograma para visualizar o painel.")
