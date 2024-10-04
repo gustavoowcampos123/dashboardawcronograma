@@ -10,7 +10,7 @@ from reportlab.pdfgen import canvas
 
 # Configurações de Página
 st.set_page_config(
-    page_title="Dashboard de Projetos",
+    page_title="AWPlan - Dashboard interativo",
     page_icon="📊",
     layout="wide"
 )
