@@ -4,8 +4,6 @@ import io
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 import plotly.express as px
-import plotly.graph_objects as go
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import re
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -75,31 +73,6 @@ def gerar_pdf_atividades_atrasadas(atividades_atrasadas):
     pdf_buffer.seek(0)
     return pdf_buffer
 
-# Função para gerar calendário interativo
-def gerar_calendario_interativo(df_raw):
-    df_calendario = df_raw[['Nome da tarefa', 'Início', 'Término']]
-
-    # Criação do grid interativo com st_aggrid
-    gd = GridOptionsBuilder.from_dataframe(df_calendario)
-    gd.configure_pagination(enabled=True)
-    gd.configure_selection(selection_mode="single", use_checkbox=True)
-    grid_options = gd.build()
-
-    grid_response = AgGrid(
-        df_calendario,
-        gridOptions=grid_options,
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
-        allow_unsafe_jscode=True,
-        theme='streamlit',
-    )
-
-    selected = grid_response['selected_rows']
-    if selected:
-        st.write(f"**Detalhes da Tarefa Selecionada:**")
-        st.write(f"Tarefa: {selected[0]['Nome da tarefa']}")
-        st.write(f"Início: {selected[0]['Início']}")
-        st.write(f"Término: {selected[0]['Término']}")
-
 # Sidebar
 st.sidebar.title("Painel de Controle")
 st.sidebar.info("Navegue pelas seções para acessar diferentes dados do projeto.")
@@ -161,9 +134,6 @@ if uploaded_file is not None:
         st.plotly_chart(fig_curva_s, use_container_width=True)
 
         # Expansíveis
-        with st.expander("Calendário Interativo de Tarefas"):
-            gerar_calendario_interativo(df_raw)
-
         with st.expander("Dados do Cronograma"):
             st.dataframe(df_raw)
         with st.expander("Atividades sem Predecessoras"):
@@ -172,8 +142,6 @@ if uploaded_file is not None:
             st.dataframe(caminho_critico)
         with st.expander("Atividades Atrasadas"):
             st.dataframe(atividades_atrasadas)
-        with st.expander("Atividades para Próxima Semana"):
-            st.dataframe(atividades_proxima_semana)
         with st.expander("Atividades para Próxima Semana"):
             st.dataframe(atividades_proxima_semana)
         with st.expander("Atividades para os Próximos 15 Dias"):
