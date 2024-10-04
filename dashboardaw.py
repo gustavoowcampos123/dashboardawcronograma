@@ -110,7 +110,7 @@ if uploaded_file is not None:
 
         # Indicadores
         atividades_concluidas = len(df_raw[df_raw['% concluída'] == 1])
-        st.title("Dashboard do Projeto")
+        st.title("AWPlan - Dashboard interativo")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Atividades Concluídas", atividades_concluidas)
         
