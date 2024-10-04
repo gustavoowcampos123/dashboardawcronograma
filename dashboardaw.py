@@ -43,12 +43,17 @@ uploaded_file = st.file_uploader("Carregar Cronograma", type=["xlsx"])
 if uploaded_file is not None:
     # Leitura do arquivo carregado
     df_raw = pd.read_excel(uploaded_file)
+    
+    # Converte colunas de datas para o formato datetime
+    df_raw['Início'] = pd.to_datetime(df_raw['Início'])
+    df_raw['Término'] = pd.to_datetime(df_raw['Término'])
 
-    # Filtragens e métricas
+    # Filtragens e cálculos
     proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
     atividades_proximos_15_dias = df_raw[(df_raw['Início'] <= proximos_15_dias) & (df_raw['Término'] >= pd.Timestamp.today())]
+    atividades_proxima_semana = df_raw[(df_raw['Início'] <= pd.Timestamp.today() + pd.Timedelta(days=7)) & (df_raw['Término'] >= pd.Timestamp.today())]
     atividades_sem_predecessora = df_raw[df_raw['Predecessoras'].isna()]
-    caminho_critico = df_raw[df_raw['Duracao'] > 15]
+    caminho_critico = df_raw[df_raw['Duracao'] > 15]  # Exemplo simplificado
     atividades_atrasadas = df_raw[df_raw['Término'] < pd.Timestamp.today()]
 
     # Indicadores
@@ -58,15 +63,13 @@ if uploaded_file is not None:
     col2.metric("Atividades Atrasadas", len(atividades_atrasadas))
     col3.metric("Prazo Total do Projeto", f"{df_raw['Duracao'].sum()} dias")
 
-    # Gráfico Curva S (simulação)
-    curva_s_df = pd.DataFrame({
-        'Semana': list(range(1, 21)),
-        'Progresso': [5, 10, 20, 30, 40, 50, 60, 65, 70, 80, 85, 90, 92, 93, 95, 96, 97, 98, 99, 100]
-    })
+    # Gráfico Curva S - Progresso por Semana
+    progresso_semanal = df_raw.resample('W', on='Término').size().cumsum()
+    curva_s_df = pd.DataFrame({'Semana': progresso_semanal.index, 'Progresso': progresso_semanal.values})
     fig_curva_s = px.line(curva_s_df, x='Semana', y='Progresso', title="Curva S - Progresso do Projeto")
     st.plotly_chart(fig_curva_s, use_container_width=True)
 
-    # Expanders
+    # Expanders para visualização detalhada
     with st.expander("Dados do Cronograma"):
         st.dataframe(df_raw)
 
@@ -79,11 +82,14 @@ if uploaded_file is not None:
     with st.expander("Atividades Atrasadas"):
         st.dataframe(atividades_atrasadas)
 
-    with st.expander("Atividades para Próximos 15 Dias"):
+    with st.expander("Atividades para Próxima Semana"):
+        st.dataframe(atividades_proxima_semana)
+
+    with st.expander("Atividades para os Próximos 15 Dias"):
         st.dataframe(atividades_proximos_15_dias)
 
-    # Exportar Relatório em PDF (simulação)
-    pdf_data = io.BytesIO()  # Placeholder para o PDF
+    # Exportar Relatório em PDF (simulação de exportação)
+    pdf_data = io.BytesIO()  # Placeholder para a geração do PDF real
     st.download_button(
         label="📥 Baixar Relatório em PDF",
         data=pdf_data.getvalue(),
@@ -94,10 +100,23 @@ if uploaded_file is not None:
     # Exportar Excel
     excel_output = io.BytesIO()
     wb = Workbook()
+
+    # Aba Curva S
     ws_curva_s = wb.active
     ws_curva_s.title = 'Curva S'
     for r in dataframe_to_rows(curva_s_df, index=False, header=True):
         ws_curva_s.append(r)
+    
+    # Aba Atividades Próxima Semana
+    ws_atividades_proxima_semana = wb.create_sheet(title="Atividades Próxima Semana")
+    for r in dataframe_to_rows(atividades_proxima_semana, index=False, header=True):
+        ws_atividades_proxima_semana.append(r)
+
+    # Aba Atividades Próximos 15 Dias
+    ws_atividades_proximos_15_dias = wb.create_sheet(title="Atividades Próximos 15 Dias")
+    for r in dataframe_to_rows(atividades_proximos_15_dias, index=False, header=True):
+        ws_atividades_proximos_15_dias.append(r)
+
     wb.save(excel_output)
     excel_output.seek(0)
     st.download_button(
