@@ -35,6 +35,29 @@ def clean_weekday_abbreviation(date_str):
 
 def gerar_curva_s(df_raw, start_date_str='16/09/2024'):
     # Função já existente para gerar Curva S
+    df_raw['Início'] = df_raw['Início'].apply(lambda x: clean_weekday_abbreviation(x) if isinstance(x, str) else x)
+    df_raw['Término'] = df_raw['Término'].apply(lambda x: clean_weekday_abbreviation(x) if isinstance(x, str) else x)
+
+    start_date = pd.to_datetime(start_date_str)
+    end_date = df_raw['Término'].max()
+    weeks = pd.date_range(start=start_date, end=end_date, freq='W-MON')
+
+    progress_by_week = pd.DataFrame(weeks, columns=['Data'])
+    progress_by_week['% Executado'] = 0.0
+
+    for _, row in df_raw.iterrows():
+        if pd.notna(row['Início']) and pd.notna(row['Término']):
+            task_weeks = pd.date_range(start=row['Início'], end=row['Término'], freq='W-MON')
+            weekly_progress = 1 / len(task_weeks) if len(task_weeks) > 0 else 1
+            for week in task_weeks:
+                progress_by_week.loc[progress_by_week['Data'] == week, '% Executado'] += weekly_progress
+
+    progress_by_week['% Executado Acumulado'] = progress_by_week['% Executado'].cumsum() * 100
+    max_progress = progress_by_week['% Executado Acumulado'].max()
+    if max_progress > 0:
+        progress_by_week['% Executado Acumulado'] = (progress_by_week['% Executado Acumulado'] / max_progress) * 100
+
+    return progress_by_week
 
 # Funções para ChatGPT
 def analisar_atrasos(df):
