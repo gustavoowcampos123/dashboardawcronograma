@@ -5,6 +5,8 @@ from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 import plotly.express as px
 import re
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 # Configurações de Página
 st.set_page_config(
@@ -23,6 +25,25 @@ def parse_date(date_str):
         return pd.to_datetime(date_str[4:], format='%d/%m/%y', errors='coerce')
     except ValueError:
         return pd.NaT
+
+# Função para gerar PDF das atividades atrasadas
+def gerar_pdf_atividades_atrasadas(atividades_atrasadas):
+    pdf_buffer = io.BytesIO()
+    c = canvas.Canvas(pdf_buffer, pagesize=letter)
+    c.drawString(100, 750, "Relatório de Atividades Atrasadas")
+    
+    # Adicionar conteúdo das atividades atrasadas
+    y_position = 730
+    for i, (_, row) in enumerate(atividades_atrasadas.iterrows()):
+        c.drawString(50, y_position, f"{i + 1}. {row['Nome da tarefa']} - {row['Término'].strftime('%d/%m/%Y')}")
+        y_position -= 20
+        if y_position < 50:
+            c.showPage()
+            y_position = 750
+
+    c.save()
+    pdf_buffer.seek(0)
+    return pdf_buffer
 
 # Sidebar
 st.sidebar.title("Painel de Controle")
@@ -63,7 +84,18 @@ if uploaded_file is not None:
         st.title("Dashboard do Projeto")
         col1, col2, col3 = st.columns(3)
         col1.metric("Atividades Concluídas", atividades_concluidas)
-        col2.metric("Atividades Atrasadas", len(atividades_atrasadas))
+        
+        with col2:
+            st.metric("Atividades Atrasadas", len(atividades_atrasadas))
+            if st.button("Gerar PDF de Atividades Atrasadas"):
+                pdf_atividades = gerar_pdf_atividades_atrasadas(atividades_atrasadas)
+                st.download_button(
+                    label="📥 Baixar PDF de Atividades Atrasadas",
+                    data=pdf_atividades,
+                    file_name="atividades_atrasadas.pdf",
+                    mime="application/pdf"
+                )
+
         col3.metric("Prazo Total do Projeto", f"{prazo_total} dias")
 
         # Gráfico Curva S
