@@ -43,11 +43,15 @@ uploaded_file = st.file_uploader("Carregar Cronograma", type=["xlsx"])
 if uploaded_file is not None:
     # Leitura do arquivo carregado
     df_raw = pd.read_excel(uploaded_file)
-    
-    # Conversão de colunas para datetime
-    df_raw['Início'] = pd.to_datetime(df_raw['Início'])
-    df_raw['Término'] = pd.to_datetime(df_raw['Término'])
-    
+
+    # Conversão de colunas para datetime com tratamento de erros
+    df_raw['Início'] = pd.to_datetime(df_raw['Início'], errors='coerce')
+    df_raw['Término'] = pd.to_datetime(df_raw['Término'], errors='coerce')
+
+    # Verificar valores inválidos nas colunas de data
+    if df_raw['Início'].isna().sum() > 0 or df_raw['Término'].isna().sum() > 0:
+        st.warning("Algumas datas nos campos 'Início' ou 'Término' não puderam ser interpretadas e foram ignoradas.")
+
     # Filtros de atividades para próximos 15 dias e sem predecessoras
     proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
     atividades_proximos_15_dias = df_raw[(df_raw['Início'] <= proximos_15_dias) & (df_raw['Término'] >= pd.Timestamp.today())]
@@ -55,10 +59,10 @@ if uploaded_file is not None:
 
     # Cálculo do caminho crítico (atividades com duração superior a 15 dias)
     caminho_critico = df_raw[df_raw['Duracao'] > 15]
-    
+
     # Filtro de atividades atrasadas (com término antes da data atual)
     atividades_atrasadas = df_raw[df_raw['Término'] < pd.Timestamp.today()]
-    
+
     # Atividades para a próxima semana
     proxima_semana = pd.Timestamp.today() + pd.Timedelta(days=7)
     atividades_proxima_semana = df_raw[(df_raw['Início'] <= proxima_semana) & (df_raw['Término'] >= pd.Timestamp.today())]
