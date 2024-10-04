@@ -47,7 +47,7 @@ if uploaded_file is not None:
         # Cálculo do prazo total com base nas datas
         data_inicio_mais_cedo = df_raw['Início'].min()
         data_termino_mais_tarde = df_raw['Término'].max()
-        prazo_total = (data_termino_mais_cedo - data_inicio_mais_cedo).days
+        prazo_total = (data_termino_mais_tarde - data_inicio_mais_cedo).days
 
         # Filtros de atividades
         proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
