@@ -3,7 +3,8 @@ import pandas as pd
 import openai
 
 # Configuração da chave da API OpenAI diretamente dos segredos do Streamlit
-openai.api_key = st.secrets["openai"]["api_key"]
+openai.api_key = "org-KKZTeMEKFocZz7O14lGkSfJE"
+
 
 # Função para analisar atrasos usando a nova API de completions
 def analisar_atrasos(df):
