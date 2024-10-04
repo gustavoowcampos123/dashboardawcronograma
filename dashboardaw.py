@@ -75,7 +75,7 @@ if uploaded_file is not None:
         atividades_proximos_15_dias = df_raw[(df_raw['Início'] <= proximos_15_dias) & (df_raw['Término'] >= pd.Timestamp.today())]
         atividades_sem_predecessora = df_raw[df_raw['Predecessoras'].isna()]
         caminho_critico = df_raw[df_raw['Duração'] > 15]
-        atividades_atrasadas = df_raw[df_raw['Término'] < pd.Timestamp.today()]
+        atividades_atrasadas = df_raw[(df_raw['Término'] < pd.Timestamp.today()) & (df_raw['% concluída'] != 1)]
         proxima_semana = pd.Timestamp.today() + pd.Timedelta(days=7)
         atividades_proxima_semana = df_raw[(df_raw['Início'] <= proxima_semana) & (df_raw['Término'] >= pd.Timestamp.today())]
 
@@ -98,9 +98,13 @@ if uploaded_file is not None:
 
         col3.metric("Prazo Total do Projeto", f"{prazo_total} dias")
 
-        # Gráfico Curva S
-        curva_s_df = pd.DataFrame({'Semana': list(range(1, 21)), 'Progresso': [5, 10, 20, 30, 40, 50, 60, 65, 70, 80, 85, 90, 92, 93, 95, 96, 97, 98, 99, 100]})
-        fig_curva_s = px.line(curva_s_df, x='Semana', y='Progresso', title="Curva S - Progresso do Projeto")
+        # Cálculo da Curva S
+        df_raw['Semana'] = df_raw['Início'].dt.isocalendar().week
+        progresso_semanal = df_raw.groupby('Semana')['% concluída'].sum().cumsum()
+        curva_s_df = pd.DataFrame({'Semana': progresso_semanal.index, 'Progresso Acumulado': progresso_semanal})
+
+        # Gráfico da Curva S
+        fig_curva_s = px.line(curva_s_df, x='Semana', y='Progresso Acumulado', title="Curva S - Progresso Acumulado do Projeto")
         st.plotly_chart(fig_curva_s, use_container_width=True)
 
         # Expansíveis
