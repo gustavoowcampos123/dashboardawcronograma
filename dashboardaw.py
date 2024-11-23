@@ -4,6 +4,8 @@ import io
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 import plotly.express as px
+import plotly.graph_objects as go
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import re
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -89,67 +91,95 @@ if uploaded_file is not None:
     df_raw['Início'] = df_raw['Início'].apply(parse_date)
     df_raw['Término'] = df_raw['Término'].apply(parse_date)
 
+    # Extrair porcentagem executada da primeira linha
+    porcentagem_executada = df_raw.iloc[0]['% concluída'] if '% concluída' in df_raw.columns else 0
+
     # Verificar colunas necessárias
     if 'Duração' not in df_raw.columns or 'Início' not in df_raw.columns or 'Término' not in df_raw.columns:
         st.error("O arquivo deve conter as colunas 'Duração', 'Início', e 'Término'.")
     else:
-        # Cálculo do prazo total com base nas datas
+        # Cálculo do prazo total e dias para finalizar
         data_inicio_mais_cedo = df_raw['Início'].min()
         data_termino_mais_tarde = df_raw['Término'].max()
         prazo_total = (data_termino_mais_tarde - data_inicio_mais_cedo).days
         dias_para_finalizar = (data_termino_mais_tarde - pd.Timestamp.today()).days
-
-        # Filtros de atividades
-        proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
-        atividades_proximos_15_dias = df_raw[(df_raw['Início'] <= proximos_15_dias) & (df_raw['Término'] >= pd.Timestamp.today())]
-        atividades_sem_predecessora = df_raw[df_raw['Predecessoras'].isna()]
-        caminho_critico = df_raw[df_raw['Duração'] > 15]
-        atividades_atrasadas = df_raw[(df_raw['Término'] < pd.Timestamp.today()) & (df_raw['% concluída'] != 1)]
-        proxima_semana = pd.Timestamp.today() + pd.Timedelta(days=7)
-        atividades_proxima_semana = df_raw[(df_raw['Início'] <= proxima_semana) & (df_raw['Término'] >= pd.Timestamp.today())]
 
         # Indicadores
         atividades_concluidas = len(df_raw[df_raw['% concluída'] == 1])
         st.title("Dashboard do Projeto")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Atividades Concluídas", atividades_concluidas)
-        
-        with col2:
-            st.metric("Atividades Atrasadas", len(atividades_atrasadas))
-            if st.button("Gerar PDF de Atividades Atrasadas"):
-                pdf_atividades = gerar_pdf_atividades_atrasadas(atividades_atrasadas)
-                st.download_button(
-                    label="📥 Baixar PDF de Atividades Atrasadas",
-                    data=pdf_atividades,
-                    file_name="atividades_atrasadas.pdf",
-                    mime="application/pdf"
-                )
-
+        col2.metric("Atividades Atrasadas", len(df_raw[(df_raw['Término'] < pd.Timestamp.today()) & (df_raw['% concluída'] != 1)]))
         col3.metric("Prazo Total do Projeto", f"{prazo_total} dias")
         col4.metric("Dias para Finalizar", f"{dias_para_finalizar} dias")
 
         # Geração e Plotagem da Curva S
         curva_s_df = gerar_curva_s(df_raw, start_date_str=data_inicio_mais_cedo.strftime('%d/%m/%Y'))
         fig_curva_s = px.line(curva_s_df, x='Data', y='% Executado Acumulado', title="Curva S - Progresso Acumulado do Projeto")
+        
+        # Adicionar porcentagem executada ao gráfico
+        fig_curva_s.add_trace(go.Scatter(
+            x=[pd.Timestamp.today()],
+            y=[porcentagem_executada],
+            mode="markers+text",
+            text=["Este é seu avanço"],
+            textposition="top center",
+            marker=dict(size=12, color="red")
+        ))
         st.plotly_chart(fig_curva_s, use_container_width=True)
 
         # Expansíveis
         with st.expander("Dados do Cronograma"):
             st.dataframe(df_raw)
+        with st.expander("Calendário Interativo de Tarefas"):
+            df_calendario = df_raw[['Nome da tarefa', 'Início', 'Término']]
+            gd = GridOptionsBuilder.from_dataframe(df_calendario)
+            gd.configure_pagination(enabled=True)
+            gd.configure_selection(selection_mode="single", use_checkbox=True)
+            grid_options = gd.build()
+            grid_response = AgGrid(
+                df_calendario,
+                gridOptions=grid_options,
+                update_mode=GridUpdateMode.SELECTION_CHANGED,
+                allow_unsafe_jscode=True,
+                theme='streamlit',
+            )
+            selected = grid_response['selected_rows']
+            if selected:
+                st.write(f"**Detalhes da Tarefa Selecionada:**")
+                st.write(f"Tarefa: {selected[0]['Nome da tarefa']}")
+                st.write(f"Início: {selected[0]['Início']}")
+                st.write(f"Término: {selected[0]['Término']}")
         with st.expander("Atividades sem Predecessoras"):
+            atividades_sem_predecessora = df_raw[df_raw['Predecessoras'].isna()]
             st.dataframe(atividades_sem_predecessora)
-        with st.expander("Caminho Crítico"):
-            st.dataframe(caminho_critico)
+
         with st.expander("Atividades Atrasadas"):
+            atividades_atrasadas = df_raw[(df_raw['Término'] < pd.Timestamp.today()) & (df_raw['% concluída'] != 1)]
             st.dataframe(atividades_atrasadas)
+
         with st.expander("Atividades para Próxima Semana"):
+            proxima_semana = pd.Timestamp.today() + pd.Timedelta(days=7)
+            atividades_proxima_semana = df_raw[
+                (df_raw['Início'] <= proxima_semana) & (df_raw['Término'] >= pd.Timestamp.today())
+            ]
             st.dataframe(atividades_proxima_semana)
+
         with st.expander("Atividades para os Próximos 15 Dias"):
+            proximos_15_dias = pd.Timestamp.today() + pd.Timedelta(days=15)
+            atividades_proximos_15_dias = df_raw[
+                (df_raw['Início'] <= proximos_15_dias) & (df_raw['Término'] >= pd.Timestamp.today())
+            ]
             st.dataframe(atividades_proximos_15_dias)
 
         # Exportações
         pdf_data = io.BytesIO()
-        st.download_button(label="📥 Baixar Relatório em PDF", data=pdf_data.getvalue(), file_name="relatorio_projeto.pdf", mime="application/pdf")
+        st.download_button(
+            label="📥 Baixar Relatório em PDF",
+            data=pdf_data.getvalue(),
+            file_name="relatorio_projeto.pdf",
+            mime="application/pdf"
+        )
 
         excel_output = io.BytesIO()
         wb = Workbook()
@@ -157,8 +187,26 @@ if uploaded_file is not None:
         ws_curva_s.title = 'Curva S'
         for r in dataframe_to_rows(curva_s_df, index=False, header=True):
             ws_curva_s.append(r)
+
+        ws_atividades_proxima_semana = wb.create_sheet(title="Atividades Próxima Semana")
+        for r in dataframe_to_rows(atividades_proxima_semana, index=False, header=True):
+            ws_atividades_proxima_semana.append(r)
+
+        ws_atividades_proximos_15_dias = wb.create_sheet(title="Atividades Próximos 15 Dias")
+        for r in dataframe_to_rows(atividades_proximos_15_dias, index=False, header=True):
+            ws_atividades_proximos_15_dias.append(r)
+
+        ws_atividades_atrasadas = wb.create_sheet(title="Atividades Atrasadas")
+        for r in dataframe_to_rows(atividades_atrasadas, index=False, header=True):
+            ws_atividades_atrasadas.append(r)
+
         wb.save(excel_output)
         excel_output.seek(0)
-        st.download_button(label="📥 Baixar Relatório em Excel", data=excel_output.getvalue(), file_name="relatorio_projeto.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(
+            label="📥 Baixar Relatório em Excel",
+            data=excel_output.getvalue(),
+            file_name="relatorio_projeto.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 else:
     st.warning("Por favor, carregue o cronograma para visualizar o painel.")
