@@ -3,5 +3,4 @@ pandas
 plotly
 openpyxl
 reportlab
-matplotlib
-st-aggrid
+streamlit-aggrid
